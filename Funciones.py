@@ -7,6 +7,8 @@ import numpy as np
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import os 
+from sklearn.cluster import KMeans
+import plotly.express as px
 
 #%%
 #--- Empresas a investigar  ---
@@ -122,3 +124,82 @@ def graficar_precios(dataframes, output_path="./plots/"):
 
 #--- Llamada a la función ---
 graficar_precios(dataframes, output_path="./plots/")
+
+#%%
+#--- Función para calcular retornos y volatilidad ---
+def calcular_metricas_anuales(dataframes):
+    """
+    Calcula retornos y volatilidad anualizados para cada acción.
+
+    Args:
+        dataframes (dict): Diccionario con nombres como llave y DataFrames como valores.
+
+    Returns:
+        pd.DataFrame: DataFrame con las métricas anualizadas (retorno y volatilidad).
+    """
+    metricas = []
+
+    for name, df in dataframes.items():
+        daily_log_returns = np.log(df['Adj Close'] / df['Adj Close'].shift(1))
+        annualized_returns = daily_log_returns.mean() * 252
+        annualized_volatility = daily_log_returns.std() * np.sqrt(252)
+        metricas.append([name, annualized_returns, annualized_volatility])
+
+    # Convertir a DataFrame
+    metricas_df = pd.DataFrame(metricas, columns=['Empresa', 'Retorno Anualizado', 'Volatilidad Anualizada'])
+    return metricas_df
+
+#--- Función para clustering y gráfico de dispersión ---
+def clustering_interactivo(metricas_df, n_clusters=3, output_path=None):
+    """
+    Realiza clustering en las métricas anualizadas y genera un gráfico interactivo.
+
+    Args:
+        metricas_df (pd.DataFrame): DataFrame con métricas anualizadas.
+        n_clusters (int): Número de clusters a usar en el modelo de clustering.
+        output_path (str): Ruta donde se guardará la gráfica interactiva (opcional).
+
+    Returns:
+        pd.DataFrame: DataFrame con las asignaciones de cluster.
+    """
+    # Preparar datos para clustering
+    X = metricas_df[['Volatilidad Anualizada', 'Retorno Anualizado']].values
+
+    # Modelo de clustering
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    metricas_df['Cluster'] = kmeans.fit_predict(X)
+
+    # Crear gráfico interactivo con Plotly
+    fig = px.scatter(
+        metricas_df,
+        x='Volatilidad Anualizada',
+        y='Retorno Anualizado',
+        color='Cluster',
+        text='Empresa',
+        color_continuous_scale=px.colors.sequential.Viridis,  # Cambia aquí la paleta de colores
+        title='Clustering: Volatilidad vs. Retorno Anualizado'
+    )
+
+    # Mejorar visualización
+    fig.update_traces(textposition='top center')  # Ubicación de etiquetas
+    fig.update_layout(
+        xaxis_title='Volatilidad Anualizada',
+        yaxis_title='Retorno Anualizado',
+        template='plotly_white',  # Cambiar estilo general
+        title_font=dict(size=20),
+        legend_title=dict(text='Cluster'),
+        font=dict(size=12),
+    )
+
+    # Guardar la gráfica si se especifica una ruta
+    if output_path:
+        fig.write_html(output_path)
+        print(f"Gráfica interactiva guardada en {output_path}")
+
+    fig.show()
+    return metricas_df
+
+# Ejecutar el clustering con visualización mejorada
+resultado_interactivo = clustering_interactivo(
+    metricas_df=calcular_metricas_anuales(dataframes), 
+    n_clusters=5)
