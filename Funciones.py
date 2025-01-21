@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+import os 
 
 #%%
 #--- Empresas a investigar  ---
@@ -17,7 +18,19 @@ big_tech_symbols = {
     "Alphabet (Google) - Clase C": "GOOG",
     "Meta": "META",
     "Tesla": "TSLA",
-    "NVIDIA": "NVDA"
+    "NVIDIA": "NVDA",
+    'Alibaba': 'BABA',
+    'ASML': 'ASML',
+    'Berkshire Hathaway': 'BRK-B',
+    'Citi Group': 'C',
+    'Everest': 'EG',
+    'Nu': 'NU',
+    'Ecopetrol': 'EC',
+    'JP Morgan': 'JPM',
+    'LVMH': 'LVMUY',
+    'Moderna': ' MRNA',
+    'SLB': 'SLB',
+    'UBER': 'UBER'
 }
 
 
@@ -73,3 +86,39 @@ dataframes = generar_dataframes(big_tech_symbols, start, end)
 #%%
 # 2. Guardar los DataFrames como .txt
 guardar_dataframes(dataframes, output_path="./data/")
+
+
+
+#%%
+
+#--- Función para generar gráficas ---
+def graficar_precios(dataframes, output_path="./plots/"):
+    """
+    Genera una gráfica del precio de cierre y precio ajustado para cada acción.
+
+    Args:
+        dataframes (dict): Diccionario con nombres como llave y DataFrames como valores.
+        output_path (str): Ruta donde se guardarán las gráficas en formato PNG.
+    """
+    # Crear el directorio para guardar las gráficas
+    os.makedirs(output_path, exist_ok=True)
+
+    for name, df in dataframes.items():
+        plt.figure(figsize=(12, 6))
+        plt.plot(df['Close'], label=f'{name}_Close', color='blue')
+        plt.plot(df['Adj Close'], label=f'{name}_Adj', color='green')
+        plt.title(f'Precio de compra: {name}')
+        plt.xlabel('Fecha')
+        plt.ylabel('Precio USD')
+        plt.legend()
+        plt.grid(True)
+
+        # Guardar la gráfica como archivo PNG
+        filename = f"{output_path}{name.replace(' ', '_')}_precios.png"
+        plt.savefig(filename)
+        print(f"Gráfica guardada para {name} en {filename}")
+
+        plt.close()
+
+#--- Llamada a la función ---
+graficar_precios(dataframes, output_path="./plots/")
